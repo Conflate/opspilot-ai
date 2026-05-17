@@ -27,17 +27,22 @@ public class Ticket {
     @Lob
     private String description;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TicketStatus status;
+    private String sourceSystem;
+
+    private String affectedService;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TicketSeverity severity;
+    private TicketStatus status = TicketStatus.OPEN;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TicketCategory category;
+    private TicketSeverity severity = TicketSeverity.MEDIUM;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TicketCategory category = TicketCategory.REQUEST;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -48,9 +53,11 @@ public class Ticket {
     protected Ticket() {
     }
 
-    public Ticket(String title, String description, TicketStatus status, TicketSeverity severity, TicketCategory category) {
+    public Ticket(String title, String description, String sourceSystem, String affectedService, TicketStatus status, TicketSeverity severity, TicketCategory category) {
         this.title = title;
         this.description = description;
+        this.sourceSystem = sourceSystem;
+        this.affectedService = affectedService;
         this.status = status;
         this.severity = severity;
         this.category = category;
@@ -59,6 +66,15 @@ public class Ticket {
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
+        if (status == null) {
+            status = TicketStatus.OPEN;
+        }
+        if (severity == null) {
+            severity = TicketSeverity.MEDIUM;
+        }
+        if (category == null) {
+            category = TicketCategory.REQUEST;
+        }
         createdAt = now;
         updatedAt = now;
     }
@@ -86,6 +102,22 @@ public class Ticket {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getSourceSystem() {
+        return sourceSystem;
+    }
+
+    public void setSourceSystem(String sourceSystem) {
+        this.sourceSystem = sourceSystem;
+    }
+
+    public String getAffectedService() {
+        return affectedService;
+    }
+
+    public void setAffectedService(String affectedService) {
+        this.affectedService = affectedService;
     }
 
     public TicketStatus getStatus() {
