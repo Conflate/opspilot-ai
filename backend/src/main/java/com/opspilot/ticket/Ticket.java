@@ -7,7 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -24,7 +23,7 @@ public class Ticket {
     @Column(nullable = false)
     private String title;
 
-    @Lob
+    @Column(columnDefinition = "text")
     private String description;
 
     @Column(nullable = false)
@@ -38,11 +37,11 @@ public class Ticket {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TicketSeverity severity = TicketSeverity.MEDIUM;
+    private TicketSeverity severity = TicketSeverity.UNTRIAGED;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TicketCategory category = TicketCategory.REQUEST;
+    private TicketCategory category = TicketCategory.UNCLASSIFIED;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -70,10 +69,10 @@ public class Ticket {
             status = TicketStatus.OPEN;
         }
         if (severity == null) {
-            severity = TicketSeverity.MEDIUM;
+            severity = TicketSeverity.UNTRIAGED;
         }
         if (category == null) {
-            category = TicketCategory.REQUEST;
+            category = TicketCategory.UNCLASSIFIED;
         }
         createdAt = now;
         updatedAt = now;

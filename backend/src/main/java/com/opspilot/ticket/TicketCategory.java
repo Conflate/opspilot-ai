@@ -1,9 +1,14 @@
 package com.opspilot.ticket;
 
 public enum TicketCategory {
-    INCIDENT,
-    REQUEST,
-    MAINTENANCE,
+    UNCLASSIFIED,
+    ACCESS,
+    PERFORMANCE,
+    CONFIGURATION,
+    BUG,
+    INFRASTRUCTURE,
+    USER_SUPPORT,
     SECURITY,
-    INFRASTRUCTURE
+    DATA_ISSUE,
+    OTHER
 }

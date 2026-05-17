@@ -4,5 +4,6 @@ public enum TicketSeverity {
     LOW,
     MEDIUM,
     HIGH,
-    CRITICAL
+    CRITICAL,
+    UNTRIAGED
 }
