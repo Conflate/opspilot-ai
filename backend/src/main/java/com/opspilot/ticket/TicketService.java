@@ -3,16 +3,19 @@ package com.opspilot.ticket;
 import com.opspilot.ticket.dto.CreateTicketRequest;
 import com.opspilot.ticket.dto.TicketResponse;
 import org.springframework.stereotype.Service;
-
+import com.opspilot.audit.AuditActionType;
+import com.opspilot.audit.AuditService;
 import java.util.List;
 
 @Service
 public class TicketService {
 
     private final TicketRepository ticketRepository;
+    private final AuditService auditService;
 
-    public TicketService(TicketRepository ticketRepository) {
+    public TicketService(TicketRepository ticketRepository, AuditService auditService) {
         this.ticketRepository = ticketRepository;
+        this.auditService = auditService;
     }
 
     public TicketResponse createTicket(CreateTicketRequest request) {
@@ -24,6 +27,13 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
+        auditService.log(
+                savedTicket.getId(),
+                AuditActionType.TICKET_CREATED,
+                null,
+                "Ticket created: " + savedTicket.getTitle(),
+                "system"
+        );
         return TicketResponse.from(savedTicket);
     }
 

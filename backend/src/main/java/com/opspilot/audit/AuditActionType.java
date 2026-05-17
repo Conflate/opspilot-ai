@@ -1,0 +1,13 @@
+package com.opspilot.audit;
+
+public enum AuditActionType {
+    TICKET_CREATED,
+    STATUS_CHANGED,
+    TRIAGE_REQUESTED,
+    AI_TRIAGE_COMPLETED,
+    AI_TRIAGE_FAILED,
+    TRIAGE_APPROVED,
+    TRIAGE_REJECTED,
+    TRIAGE_EDITED,
+    DUPLICATE_CHECKED
+}
