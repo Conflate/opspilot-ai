@@ -9,7 +9,10 @@ import com.opspilot.ticket.Ticket;
 import com.opspilot.ticket.TicketRepository;
 import com.opspilot.ticket.TicketStatus;
 import com.opspilot.triage.dto.TriageResultResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -33,9 +36,10 @@ public class AiTriageService {
         this.auditService = auditService;
     }
 
+    @Transactional
     public TriageResultResponse triageTicket(Long ticketId) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + ticketId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found with id: " + ticketId));
 
         auditService.log(
                 ticket.getId(),
@@ -83,6 +87,7 @@ public class AiTriageService {
         return TriageResultResponse.from(savedResult);
     }
 
+    @Transactional(readOnly = true)
     public List<TriageResultResponse> getTriageResultsForTicket(Long ticketId) {
         return aiTriageRepository.findByTicketIdOrderByCreatedAtDesc(ticketId)
                 .stream()

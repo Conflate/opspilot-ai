@@ -2,9 +2,13 @@ package com.opspilot.ticket;
 
 import com.opspilot.ticket.dto.CreateTicketRequest;
 import com.opspilot.ticket.dto.TicketResponse;
-import org.springframework.stereotype.Service;
 import com.opspilot.audit.AuditActionType;
 import com.opspilot.audit.AuditService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @Service
@@ -18,6 +22,7 @@ public class TicketService {
         this.auditService = auditService;
     }
 
+    @Transactional
     public TicketResponse createTicket(CreateTicketRequest request) {
         Ticket ticket = new Ticket();
         ticket.setTitle(request.title());
@@ -37,6 +42,7 @@ public class TicketService {
         return TicketResponse.from(savedTicket);
     }
 
+    @Transactional(readOnly = true)
     public List<TicketResponse> getTickets() {
         return ticketRepository.findAll()
                 .stream()
@@ -44,9 +50,10 @@ public class TicketService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public TicketResponse getTicket(Long id) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found with id: " + id));
 
         return TicketResponse.from(ticket);
     }

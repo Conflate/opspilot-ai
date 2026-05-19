@@ -6,5 +6,7 @@ public enum TicketStatus {
     IN_PROGRESS,
     WAITING,
     RESOLVED,
-    CLOSED
+    CLOSED,
+    APPROVED,
+    REJECTED
 }
