@@ -5,8 +5,10 @@ import com.opspilot.ai.dto.AiTriageRequest;
 import com.opspilot.ticket.TicketCategory;
 import com.opspilot.ticket.TicketSeverity;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Service
+@ConditionalOnProperty(name = "opspilot.ai.provider", havingValue = "fake")
 public class FakeAiClient implements AiClient {
 
     @Override

@@ -15,5 +15,12 @@ spring:
       hibernate:
         format_sql: true
 
+opspilot:
+  ai:
+    provider: gemini
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: gemini-2.5-flash
+
 server:
   port: 8080
