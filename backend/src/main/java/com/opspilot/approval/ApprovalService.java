@@ -10,6 +10,8 @@ import com.opspilot.ticket.TicketStatus;
 import com.opspilot.triage.AiTriageRepository;
 import com.opspilot.triage.AiTriageResult;
 import org.springframework.stereotype.Service;
+import com.opspilot.common.InvalidOperationException;
+import com.opspilot.common.ResourceNotFoundException;
 
 @Service
 public class ApprovalService {
@@ -33,10 +35,10 @@ public class ApprovalService {
 
     public ApprovalResponse approveTriage(Long ticketId, Long triageId, ApprovalRequest request) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + ticketId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
 
         AiTriageResult triageResult = aiTriageRepository.findById(triageId)
-                .orElseThrow(() -> new RuntimeException("AI triage result not found with id: " + triageId));
+                .orElseThrow(() -> new ResourceNotFoundException("AI triage result not found with id: " + triageId));
 
         validateTriageBelongsToTicket(ticketId, triageResult);
 
@@ -75,10 +77,10 @@ public class ApprovalService {
 
     public ApprovalResponse rejectTriage(Long ticketId, Long triageId, ApprovalRequest request) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + ticketId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
 
         AiTriageResult triageResult = aiTriageRepository.findById(triageId)
-                .orElseThrow(() -> new RuntimeException("AI triage result not found with id: " + triageId));
+                .orElseThrow(() -> new ResourceNotFoundException("AI triage result not found with id: " + triageId));
 
         validateTriageBelongsToTicket(ticketId, triageResult);
 
@@ -109,7 +111,7 @@ public class ApprovalService {
 
     private void validateTriageBelongsToTicket(Long ticketId, AiTriageResult triageResult) {
         if (!triageResult.getTicketId().equals(ticketId)) {
-            throw new RuntimeException("Triage result does not belong to ticket id: " + ticketId);
+            throw new InvalidOperationException("Triage result does not belong to ticket id: " + ticketId);
         }
     }
 }

@@ -7,6 +7,7 @@ import com.opspilot.ticket.Ticket;
 import com.opspilot.ticket.TicketRepository;
 import com.opspilot.ticket.TicketStatus;
 import org.springframework.stereotype.Service;
+import com.opspilot.common.ResourceNotFoundException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,7 +25,7 @@ public class DuplicateDetectionService {
 
     public List<DuplicateCandidateResponse> findDuplicates(Long ticketId) {
         Ticket targetTicket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + ticketId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
 
         List<TicketStatus> searchableStatuses = List.of(
                 TicketStatus.OPEN,

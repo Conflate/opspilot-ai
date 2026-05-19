@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.opspilot.common.ResourceNotFoundException;
 
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class AiTriageService {
     @Transactional
     public TriageResultResponse triageTicket(Long ticketId) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found with id: " + ticketId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
 
         auditService.log(
                 ticket.getId(),
