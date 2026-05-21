@@ -88,6 +88,16 @@ class TicketServiceTest {
         assertEquals("Test ticket", response.title());
     }
 
+    private Ticket newTicket() {
+        try {
+            var constructor = Ticket.class.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
     private void setId(Ticket ticket, Long id) {
         try {
             var field = Ticket.class.getDeclaredField("id");
