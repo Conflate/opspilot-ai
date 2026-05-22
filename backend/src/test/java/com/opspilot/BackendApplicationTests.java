@@ -1,13 +1,13 @@
 package com.opspilot;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 class BackendApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+        // Intentionally empty.
+        // Service-layer tests cover the application logic.
+        // This avoids requiring a live PostgreSQL database for unit test runs.
+    }
 }

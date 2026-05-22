@@ -20,8 +20,18 @@ dist/
 # Logs
 *.log
 
+# Python
+__pycache__/
+
 # Docker / local config
 *.pid
+
+# Switch 2 monitor runtime data
+ebgames_browser_profile/
+switch2_monitor_debug/
+switch2_seen_inventory.json
+switch2_seen_inventory.tmp
+switch2_seen_inventory.broken-*.json
 
 # Secrets
 application-local.yml
