@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ApprovalRepository extends JpaRepository<ApprovalDecision, Long> {
     List<ApprovalDecision> findByTicketIdOrderByCreatedAtDesc(Long ticketId);
+
+    boolean existsByTriageResultId(Long triageResultId);
 }

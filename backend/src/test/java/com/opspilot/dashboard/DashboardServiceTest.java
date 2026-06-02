@@ -58,7 +58,8 @@ class DashboardServiceTest {
         when(ticketRepository.countBySeverity(TicketSeverity.MEDIUM)).thenReturn(0L);
         when(ticketRepository.countBySeverity(TicketSeverity.HIGH)).thenReturn(1L);
 
-        when(ticketRepository.findAll()).thenReturn(List.of(performanceTicket, unclassifiedTicket));
+        when(ticketRepository.countByCategory(TicketCategory.PERFORMANCE)).thenReturn(1L);
+        when(ticketRepository.countByCategory(TicketCategory.UNCLASSIFIED)).thenReturn(1L);
         when(aiTriageRepository.findAll()).thenReturn(List.of(firstTriageResult, secondTriageResult));
 
         DashboardResponse response = dashboardService.getDashboardSummary();

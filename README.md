@@ -1,535 +1,199 @@
-OpsPilot AI is an AI-assisted operational ticket triage platform built with Java Spring Boot, PostgreSQL, Docker, and Gemini.
+# OpsPilot AI
 
-The project is designed as an internal operations tool. Tickets are created, triaged by AI, reviewed by a human, and tracked through audit logs. AI does not directly modify ticket state without human approval.
+OpsPilot AI is a local operations ticketing console with AI-assisted triage, human review, duplicate tracking, and audit history.
 
-## Why This Project Exists
+I built this as a portfolio project to explore a practical AI workflow: using a model to help with messy operational tickets while keeping final decisions traceable and human-controlled. AI can recommend severity, category, probable cause, and next action, but it does not apply its own recommendation without operator approval.
 
-Operational teams often receive unclear, repetitive, or poorly categorized tickets. Manual triage creates delay, inconsistent prioritization, and duplicate work.
+## What It Does
 
-OpsPilot AI demonstrates how AI can be integrated into a reliable backend workflow without giving the model uncontrolled authority. The system uses AI for decision support while preserving human review, traceability, validation, and auditability.
+- Spring Boot backend with PostgreSQL persistence
+- React/Vite frontend for the operations console
+- Gemini-backed AI triage behind a replaceable `AiClient`
+- Fake AI client for local development and tests
+- Human approval, rejection, and manual correction flow
+- Duplicate detection suggestions plus persisted duplicate links
+- Audit trail for ticket creation, triage, review, duplicate activity, and manual edits
+- Dashboard metrics for ticket counts, severity, category, and confidence
+- Flyway migration files staged in an inactive Maven profile
 
-## Core Workflow
+## Workflow
 
 ```text
-
 Create ticket
-
-    -> Run AI triage
-
-    -> Store AI recommendation
-
-    -> Move ticket to PENDING_REVIEW
-
-    -> Human approves or rejects recommendation
-
-    -> Ticket state is updated
-
-    -> Audit log records the action
-
+  -> Run AI triage
+  -> Store recommendation
+  -> Move ticket to PENDING_REVIEW
+  -> Approve or reject recommendation
+  -> If rejected, apply manual triage
+  -> Check and mark duplicates as needed
+  -> Review audit history
 ```
-
-## Features
-
-- Ticket creation and retrieval
-
-- AI-assisted triage through a replaceable AiClient interface
-
-- Fake AI client for local development and tests
-
-- Gemini AI client for real model-based triage
-
-- Human approval and rejection workflow
-
-- Audit logging for ticket creation, AI triage, approval, rejection, and duplicate checks
-
-- Duplicate ticket detection using explainable scoring
-
-- Dashboard summary endpoint
-
-- Global API error handling
-
-- Unit tests for ticket, triage, approval, duplicate detection, and dashboard services
 
 ## Tech Stack
 
+Backend:
+
 - Java 17
-
 - Spring Boot
-
-- Spring Web
-
+- Spring Web MVC
+- Spring WebFlux `WebClient` for Gemini
 - Spring Data JPA
-
 - PostgreSQL
-
-- Docker Compose
-
-- Gemini API
-
-- JUnit 5
-
-- Mockito
-
 - Maven
+- JUnit 5 and Mockito
 
-## Architecture
+Frontend:
 
-```text
+- React
+- Vite
+- CSS modules by convention through `App.css` and `index.css`
+- Vite dev proxy from `/api` to `http://localhost:8080`
 
-Client / API Consumer
+Infrastructure:
 
-        |
+- Docker Compose for local PostgreSQL
+- Flyway SQL migrations are present but not active by default
 
-        v
-
-Spring Boot REST API
-
-        |
-
-        v
-
-Service Layer
-
-TicketService / AiTriageService / ApprovalService / AuditService
-
-        |
-
-        +--------------------+
-
-        |                    |
-
-        v                    v
-
-PostgreSQL             AiClient Interface
-
-                             |
-
-                             +--> FakeAiClient
-
-                             +--> GeminiAiClient
-
-```
-
-## Package Structure
+## Project Structure
 
 ```text
+backend/src/main/java/com/opspilot
+  ai          AI client interface, fake client, Gemini client
+  approval    human approval and rejection workflow
+  audit       audit log entity, service, and API
+  common      shared exceptions and API error handling
+  dashboard   dashboard metrics
+  duplicate   duplicate detection and duplicate links
+  ticket      ticket entity, repository, service, and API
+  triage      triage result storage and workflow
 
-com.opspilot
-
-  ai          -> AI client interface, fake AI client, Gemini client
-
-  approval    -> human approval/rejection workflow
-
-  audit       -> audit log entity, service, and API
-
-  common      -> API errors and exception handling
-
-  dashboard   -> operational summary metrics
-
-  duplicate   -> duplicate ticket detection
-
-  ticket      -> ticket entity, repository, service, and API
-
-  triage      -> AI triage result storage and workflow
-
+frontend/src
+  App.jsx     main operations console
+  App.css     application layout and components
+  index.css   global design tokens and base styles
 ```
 
-## AI Safety Design
-
-OpsPilot AI uses AI as decision support, not autonomous action.
-
-AI can:
-
-- summarize a ticket
-
-- classify category
-
-- classify severity
-
-- suggest probable cause
-
-- recommend next action
-
-- provide a confidence score
-
-AI cannot directly apply its own recommendation to a ticket.
-
-A human reviewer must approve or reject the recommendation. Approval updates the ticket category, severity, and status. Rejection preserves the original ticket category and severity. Both actions are recorded in the audit log.
-
-## Main API Endpoints
-
-### Tickets
-
-```http
-
-POST /api/tickets
-
-GET /api/tickets
-
-GET /api/tickets/{id}
-
-```
-
-Example create ticket request:
-
-```json
-
-{
-
-  "title": "Map layer loading slowly",
-
-  "description": "Several users report high latency when loading radar map layers during morning operations.",
-
-  "sourceSystem": "Service Desk",
-
-  "affectedService": "NinJo"
-
-}
-
-```
-
-### AI Triage
-
-```http
-
-POST /api/tickets/{ticketId}/triage
-
-GET /api/tickets/{ticketId}/triage
-
-```
-
-Example triage response:
-
-```json
-
-{
-
-  "id": 1,
-
-  "ticketId": 1,
-
-  "summary": "The ticket reports slow map layer loading.",
-
-  "category": "PERFORMANCE",
-
-  "severity": "MEDIUM",
-
-  "probableCause": "Possible backend latency or map service performance issue.",
-
-  "recommendedAction": "Check logs, service health, and recent changes affecting map layers.",
-
-  "confidenceScore": 0.7,
-
-  "requiresHumanReview": false,
-
-  "modelName": "fake-ai-v1",
-
-  "createdAt": "2026-05-20T00:00:00Z"
-
-}
-
-```
-
-### Human Approval
-
-```http
-
-POST /api/tickets/{ticketId}/triage/{triageId}/approve
-
-POST /api/tickets/{ticketId}/triage/{triageId}/reject
-
-```
-
-Example approval request:
-
-```json
-
-{
-
-  "reviewer": "David",
-
-  "reviewNote": "AI recommendation looks correct."
-
-}
-
-```
-
-### Audit Logs
-
-```http
-
-GET /api/tickets/{ticketId}/audit-logs
-
-```
-
-### Duplicate Detection
-
-```http
-
-GET /api/tickets/{ticketId}/duplicates
-
-```
-
-### Dashboard
-
-```http
-
-GET /api/dashboard
-
-```
-
-Example dashboard response:
-
-```json
-
-{
-
-  "totalTickets": 2,
-
-  "openTickets": 1,
-
-  "pendingReviewTickets": 0,
-
-  "approvedTickets": 1,
-
-  "rejectedTickets": 0,
-
-  "criticalTickets": 0,
-
-  "averageConfidenceScore": 0.7,
-
-  "ticketsBySeverity": {
-
-    "UNTRIAGED": 1,
-
-    "LOW": 0,
-
-    "MEDIUM": 0,
-
-    "HIGH": 1,
-
-    "CRITICAL": 0
-
-  },
-
-  "ticketsByCategory": {
-
-    "PERFORMANCE": 1,
-
-    "UNCLASSIFIED": 1
-
-  }
-
-}
-
-```
-
-## Local Setup
+## Run Locally
 
 Start PostgreSQL:
 
 ```bash
-
 docker compose up -d
-
 ```
 
 Run the backend:
 
 ```bash
-
 cd backend
-
 ./mvnw spring-boot:run
-
 ```
 
-The backend runs on:
+Run the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the frontend at:
 
 ```text
+http://127.0.0.1:5173/
+```
 
+The backend runs at:
+
+```text
 http://localhost:8080
-
 ```
 
-## Configuration
+## AI Configuration
 
-The application uses application.yaml.
-
-For fake AI mode:
-
-```yaml
-
-opspilot:
-
-  ai:
-
-    provider: fake
-
-```
-
-For Gemini mode:
-
-```yaml
-
-opspilot:
-
-  ai:
-
-    provider: gemini
-
-    gemini:
-
-      api-key: ${GEMINI_API_KEY:}
-
-      model: gemini-2.5-flash
-
-```
-
-Set the Gemini key as an environment variable:
+Set a Gemini key before running the backend in Gemini mode:
 
 ```bash
-
 export GEMINI_API_KEY="your-key-here"
-
 ```
 
-Do not commit API keys.
+The backend also contains a fake AI client for deterministic local development and tests. Do not commit API keys.
 
-## Running Tests
+## Main API Endpoints
+
+Tickets:
+
+```http
+POST /api/tickets
+GET /api/tickets
+GET /api/tickets/{id}
+```
+
+Triage:
+
+```http
+POST /api/tickets/{ticketId}/triage
+GET /api/tickets/{ticketId}/triage
+POST /api/tickets/{ticketId}/triage/manual
+```
+
+Review:
+
+```http
+POST /api/tickets/{ticketId}/triage/{triageId}/approve
+POST /api/tickets/{ticketId}/triage/{triageId}/reject
+```
+
+Duplicates:
+
+```http
+GET /api/tickets/{ticketId}/duplicates
+GET /api/tickets/{ticketId}/duplicates/links
+POST /api/tickets/{ticketId}/duplicates/{duplicateOfTicketId}
+```
+
+Audit and dashboard:
+
+```http
+GET /api/tickets/{ticketId}/audit-logs
+GET /api/dashboard
+```
+
+## Design Choices
+
+- AI recommendations are advisory until a reviewer approves them.
+- Rejection leaves the AI result in history and opens a manual triage path.
+- Manual triage creates its own triage result with `modelName` set to `manual`.
+- Duplicate detection is advisory. Marking a duplicate creates a persisted duplicate link and audit entries on both tickets.
+- The duplicate-mark audit currently uses `DUPLICATE_CHECKED` to remain compatible with the current database constraint. A staged Flyway migration adds `DUPLICATE_MARKED` for a future runtime migration step.
+- Flyway dependencies are intentionally isolated in the inactive Maven `flyway` profile. The application still relies on the current Hibernate/PostgreSQL setup unless that profile and runtime migration strategy are enabled later.
+
+## Verification
+
+Backend tests:
 
 ```bash
-
 cd backend
-
 ./mvnw test
-
 ```
 
-Current test status:
-
-```text
-
-Tests run: 11
-
-Failures: 0
-
-Errors: 0
-
-```
-
-Current coverage includes:
-
-- TicketServiceTest
-
-- AiTriageServiceTest
-
-- ApprovalServiceTest
-
-- DuplicateDetectionServiceTest
-
-- DashboardServiceTest
-
-## Example Manual Test Flow
-
-Create a ticket:
+Frontend checks:
 
 ```bash
-
-curl -X POST http://localhost:8080/api/tickets \
-
-  -H "Content-Type: application/json" \
-
-  -d '{
-
-    "title": "Map layer loading slowly",
-
-    "description": "Several users report high latency when loading radar map layers during morning operations.",
-
-    "sourceSystem": "Service Desk",
-
-    "affectedService": "NinJo"
-
-  }'
-
+cd frontend
+npm run lint
+npm run build
 ```
 
-Run triage:
+The current backend test suite covers ticket creation, AI triage, Gemini response parsing, approval/rejection, manual triage, duplicate detection, duplicate links, and dashboard metrics.
 
-```bash
+## What I Would Add Next
 
-curl -X POST http://localhost:8080/api/tickets/1/triage
+The core workflow is in place, so the next improvements would be about making it more production-like:
 
-```
-
-Approve triage:
-
-```bash
-
-curl -X POST http://localhost:8080/api/tickets/1/triage/1/approve \
-
-  -H "Content-Type: application/json" \
-
-  -d '{
-
-    "reviewer": "David",
-
-    "reviewNote": "AI recommendation looks correct."
-
-  }'
-
-```
-
-View audit logs:
-
-```bash
-
-curl http://localhost:8080/api/tickets/1/audit-logs
-
-```
-
-View dashboard:
-
-```bash
-
-curl http://localhost:8080/api/dashboard
-
-```
-
-## Portfolio Value
-
-This project demonstrates:
-
-- backend API design
-
-- Spring Boot service-layer architecture
-
-- PostgreSQL persistence
-
-- AI integration behind an interface
-
-- human-in-the-loop approval design
-
-- auditability and traceability
-
-- operational workflow modeling
-
-- unit testing with JUnit and Mockito
-
-## Future Improvements
-
-- React frontend
-
-- Swagger/OpenAPI documentation
-
-- GitHub Actions CI
-
-- Role-based access control
-
-- Better duplicate detection using embeddings or pgvector
-
-- CSV ticket import
-
-- Deployment to a cloud platform
-
-- Integration with Jira-style ticket systems
+- Add authentication and reviewer identity instead of free-form reviewer names
+- Add unmark/resolve duplicate actions
+- Add OpenAPI documentation
+- Activate Flyway after creating a deliberate baseline strategy
+- Add GitHub Actions for backend tests and frontend lint/build
+- Improve duplicate matching with embeddings or PostgreSQL full-text search
+- Add deployment documentation for a cloud target

@@ -11,15 +11,18 @@ import com.opspilot.ticket.TicketSeverity;
 import com.opspilot.ticket.TicketStatus;
 import com.opspilot.triage.AiTriageRepository;
 import com.opspilot.triage.AiTriageResult;
+import com.opspilot.common.InvalidOperationException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,7 +47,7 @@ class ApprovalServiceTest {
         ticket.setStatus(TicketStatus.PENDING_REVIEW);
 
         AiTriageResult triageResult = createTriageResult(10L, 1L);
-        ApprovalRequest request = new ApprovalRequest("David", "AI recommendation looks correct.");
+        ApprovalRequest request = new ApprovalRequest("Operator", "AI recommendation looks correct.");
 
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
         when(aiTriageRepository.findById(10L)).thenReturn(Optional.of(triageResult));
@@ -62,7 +65,7 @@ class ApprovalServiceTest {
         assertEquals(1L, response.ticketId());
         assertEquals(10L, response.triageResultId());
         assertEquals(ApprovalDecisionType.APPROVED, response.decision());
-        assertEquals("David", response.reviewer());
+        assertEquals("Operator", response.reviewer());
 
         assertEquals(TicketStatus.APPROVED, ticket.getStatus());
         assertEquals(TicketSeverity.HIGH, ticket.getSeverity());
@@ -75,7 +78,7 @@ class ApprovalServiceTest {
                 eq(AuditActionType.TRIAGE_APPROVED),
                 contains("status=PENDING_REVIEW"),
                 contains("status=APPROVED"),
-                eq("David")
+                eq("Operator")
         );
     }
 
@@ -85,7 +88,7 @@ class ApprovalServiceTest {
         ticket.setStatus(TicketStatus.PENDING_REVIEW);
 
         AiTriageResult triageResult = createTriageResult(10L, 1L);
-        ApprovalRequest request = new ApprovalRequest("David", "AI recommendation is not accurate.");
+        ApprovalRequest request = new ApprovalRequest("Operator", "AI recommendation is not accurate.");
 
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
         when(aiTriageRepository.findById(10L)).thenReturn(Optional.of(triageResult));
@@ -103,7 +106,7 @@ class ApprovalServiceTest {
         assertEquals(1L, response.ticketId());
         assertEquals(10L, response.triageResultId());
         assertEquals(ApprovalDecisionType.REJECTED, response.decision());
-        assertEquals("David", response.reviewer());
+        assertEquals("Operator", response.reviewer());
 
         assertEquals(TicketStatus.REJECTED, ticket.getStatus());
         assertEquals(TicketSeverity.UNTRIAGED, ticket.getSeverity());
@@ -116,8 +119,49 @@ class ApprovalServiceTest {
                 eq(AuditActionType.TRIAGE_REJECTED),
                 eq("PENDING_REVIEW"),
                 contains("AI triage rejected"),
-                eq("David")
+                eq("Operator")
         );
+    }
+
+    @Test
+    void approveTriage_whenTicketIsNotPendingReview_shouldRejectOperation() {
+        Ticket ticket = createTicket(1L);
+        ticket.setStatus(TicketStatus.OPEN);
+        AiTriageResult triageResult = createTriageResult(10L, 1L);
+        ApprovalRequest request = new ApprovalRequest("Operator", "Looks good.");
+
+        when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+        when(aiTriageRepository.findById(10L)).thenReturn(Optional.of(triageResult));
+
+        InvalidOperationException exception = assertThrows(
+                InvalidOperationException.class,
+                () -> approvalService.approveTriage(1L, 10L, request)
+        );
+
+        assertEquals("Ticket must be PENDING_REVIEW before triage can be approved or rejected", exception.getMessage());
+        verify(ticketRepository, never()).save(any(Ticket.class));
+        verify(approvalRepository, never()).save(any(ApprovalDecision.class));
+    }
+
+    @Test
+    void approveTriage_whenTriageAlreadyReviewed_shouldRejectOperation() {
+        Ticket ticket = createTicket(1L);
+        ticket.setStatus(TicketStatus.PENDING_REVIEW);
+        AiTriageResult triageResult = createTriageResult(10L, 1L);
+        ApprovalRequest request = new ApprovalRequest("Operator", "Looks good.");
+
+        when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+        when(aiTriageRepository.findById(10L)).thenReturn(Optional.of(triageResult));
+        when(approvalRepository.existsByTriageResultId(10L)).thenReturn(true);
+
+        InvalidOperationException exception = assertThrows(
+                InvalidOperationException.class,
+                () -> approvalService.approveTriage(1L, 10L, request)
+        );
+
+        assertEquals("AI triage result has already been reviewed: 10", exception.getMessage());
+        verify(ticketRepository, never()).save(any(Ticket.class));
+        verify(approvalRepository, never()).save(any(ApprovalDecision.class));
     }
 
     private Ticket createTicket(Long id) {

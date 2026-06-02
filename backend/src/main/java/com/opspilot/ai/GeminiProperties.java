@@ -7,6 +7,7 @@ public class GeminiProperties {
 
     private String apiKey;
     private String model;
+    private int timeoutSeconds = 20;
 
     public String getApiKey() {
         return apiKey;
@@ -22,5 +23,13 @@ public class GeminiProperties {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public int getTimeoutSeconds() {
+        return timeoutSeconds;
+    }
+
+    public void setTimeoutSeconds(int timeoutSeconds) {
+        this.timeoutSeconds = timeoutSeconds;
     }
 }

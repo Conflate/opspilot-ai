@@ -12,6 +12,7 @@ import com.opspilot.ticket.TicketRepository;
 import com.opspilot.ticket.TicketSeverity;
 import com.opspilot.ticket.TicketStatus;
 import com.opspilot.triage.dto.TriageResultResponse;
+import com.opspilot.triage.dto.ManualTriageRequest;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -140,6 +141,47 @@ class AiTriageServiceTest {
         assertEquals(1L, responses.get(0).ticketId());
         assertEquals("Summary", responses.get(0).summary());
         assertEquals(TicketCategory.PERFORMANCE, responses.get(0).category());
+    }
+
+    @Test
+    void manuallyTriageTicket_shouldApplyHumanCorrectionCreateResultAndAudit() {
+        Ticket ticket = ticket();
+        ticket.setStatus(TicketStatus.REJECTED);
+        ManualTriageRequest request = new ManualTriageRequest(
+                TicketSeverity.HIGH,
+                TicketCategory.INFRASTRUCTURE,
+                "Database connection pool saturation.",
+                "Increase pool capacity and inspect slow queries.",
+                "Operator"
+        );
+
+        when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+        when(aiTriageRepository.save(any(AiTriageResult.class))).thenAnswer(invocation -> {
+            AiTriageResult result = invocation.getArgument(0);
+            setId(result, 20L);
+            result.prePersist();
+            return result;
+        });
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TriageResultResponse response = aiTriageService.manuallyTriageTicket(1L, request);
+
+        assertEquals(20L, response.id());
+        assertEquals(TicketSeverity.HIGH, response.severity());
+        assertEquals(TicketCategory.INFRASTRUCTURE, response.category());
+        assertEquals("Database connection pool saturation.", response.probableCause());
+        assertEquals("manual", response.modelName());
+        assertEquals(TicketStatus.IN_PROGRESS, ticket.getStatus());
+        assertEquals(TicketSeverity.HIGH, ticket.getSeverity());
+        assertEquals(TicketCategory.INFRASTRUCTURE, ticket.getCategory());
+
+        verify(auditService).log(
+                eq(1L),
+                eq(AuditActionType.TRIAGE_EDITED),
+                eq("status=REJECTED, severity=UNTRIAGED, category=UNCLASSIFIED"),
+                eq("status=IN_PROGRESS, severity=HIGH, category=INFRASTRUCTURE. Manual triage applied."),
+                eq("Operator")
+        );
     }
 
     private Ticket ticket() {

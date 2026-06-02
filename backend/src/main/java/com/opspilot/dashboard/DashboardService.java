@@ -5,6 +5,7 @@ import com.opspilot.ticket.*;
 import com.opspilot.triage.AiTriageRepository;
 import com.opspilot.triage.AiTriageResult;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -21,6 +22,7 @@ public class DashboardService {
         this.aiTriageRepository = aiTriageRepository;
     }
 
+    @Transactional(readOnly = true)
     public DashboardResponse getDashboardSummary() {
         long totalTickets = ticketRepository.count();
 
@@ -49,10 +51,7 @@ public class DashboardService {
         Map<TicketCategory, Long> ticketsByCategory = Arrays.stream(TicketCategory.values())
                 .collect(Collectors.toMap(
                         category -> category,
-                        category -> ticketRepository.findAll()
-                                .stream()
-                                .filter(ticket -> ticket.getCategory() == category)
-                                .count()
+                        ticketRepository::countByCategory
                 ));
 
         return new DashboardResponse(

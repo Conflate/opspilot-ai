@@ -5,15 +5,15 @@ import com.opspilot.ai.dto.AiTriageOutput;
 import com.opspilot.ai.dto.AiTriageRequest;
 import com.opspilot.audit.AuditActionType;
 import com.opspilot.audit.AuditService;
+import com.opspilot.common.InvalidOperationException;
+import com.opspilot.common.ResourceNotFoundException;
 import com.opspilot.ticket.Ticket;
 import com.opspilot.ticket.TicketRepository;
 import com.opspilot.ticket.TicketStatus;
+import com.opspilot.triage.dto.ManualTriageRequest;
 import com.opspilot.triage.dto.TriageResultResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import com.opspilot.common.ResourceNotFoundException;
 
 import java.util.List;
 
@@ -94,5 +94,52 @@ public class AiTriageService {
                 .stream()
                 .map(TriageResultResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public TriageResultResponse manuallyTriageTicket(Long ticketId, ManualTriageRequest request) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
+
+        if (ticket.getStatus() != TicketStatus.REJECTED) {
+            throw new InvalidOperationException("Manual triage is only available after an AI triage rejection");
+        }
+
+        String oldValue = "status=" + ticket.getStatus()
+                + ", severity=" + ticket.getSeverity()
+                + ", category=" + ticket.getCategory();
+
+        AiTriageResult result = new AiTriageResult();
+        result.setTicketId(ticket.getId());
+        result.setSummary("Manual triage applied after human review.");
+        result.setCategory(request.category());
+        result.setSeverity(request.severity());
+        result.setProbableCause(request.probableCause());
+        result.setRecommendedAction(request.recommendedAction());
+        result.setConfidenceScore(1.0);
+        result.setRequiresHumanReview(false);
+        result.setModelName("manual");
+        result.setRawResponse("Manual triage by " + request.reviewer());
+
+        AiTriageResult savedResult = aiTriageRepository.save(result);
+
+        ticket.setSeverity(request.severity());
+        ticket.setCategory(request.category());
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        ticketRepository.save(ticket);
+
+        String newValue = "status=" + ticket.getStatus()
+                + ", severity=" + ticket.getSeverity()
+                + ", category=" + ticket.getCategory();
+
+        auditService.log(
+                ticket.getId(),
+                AuditActionType.TRIAGE_EDITED,
+                oldValue,
+                newValue + ". Manual triage applied.",
+                request.reviewer()
+        );
+
+        return TriageResultResponse.from(savedResult);
     }
 }

@@ -4,10 +4,8 @@ import com.opspilot.ticket.dto.CreateTicketRequest;
 import com.opspilot.ticket.dto.TicketResponse;
 import com.opspilot.audit.AuditActionType;
 import com.opspilot.audit.AuditService;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import com.opspilot.common.ResourceNotFoundException;
 
 import java.util.List;
